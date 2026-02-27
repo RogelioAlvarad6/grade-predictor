@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grade Predictor</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+
+  <!-- Global error banner -->
+  <div id="error-banner" class="error-banner hidden">
+    <span id="error-message"></span>
+    <button class="banner-close" onclick="document.getElementById('error-banner').classList.add('hidden')">✕</button>
+  </div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="header-logo">🎓</div>
+      <div>
+        <h1 class="app-title">Grade Predictor</h1>
+        <p class="app-subtitle">What-If Analyzer &amp; Scenario Planner</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Step navigator -->
+  <nav class="step-nav" id="step-nav">
+    <div class="step-item active" data-step="1">
+      <div class="step-circle">1</div>
+      <span class="step-label">Syllabus</span>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step-item" data-step="2">
+      <div class="step-circle">2</div>
+      <span class="step-label">Review Policy</span>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step-item" data-step="3">
+      <div class="step-circle">3</div>
+      <span class="step-label">Grades</span>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step-item" data-step="4">
+      <div class="step-circle">4</div>
+      <span class="step-label">Review Grades</span>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step-item" data-step="5">
+      <div class="step-circle">5</div>
+      <span class="step-label">Dashboard</span>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step-item" data-step="6">
+      <div class="step-circle">6</div>
+      <span class="step-label">What-If</span>
+    </div>
+  </nav>
+
+  <main class="main-content">
+
+    <!-- ── Panel 1: Syllabus Upload ─────────────────────────────────────── -->
+    <section id="panel-1" class="panel active">
+      <div class="panel-card">
+        <h2 class="panel-title">Import Syllabus</h2>
+        <p class="panel-description">
+          Upload your course syllabus as a <strong>PDF</strong> or <strong>TXT</strong> file.
+          The AI will extract grading categories, weights, and policies automatically.
+        </p>
+
+        <div class="drop-zone" id="syllabus-drop-zone">
+          <div class="drop-zone-icon">📄</div>
+          <p class="drop-zone-text">Drag &amp; drop your syllabus here</p>
+          <p class="drop-zone-sub">or</p>
+          <label class="btn btn-secondary" for="syllabus-file-input">Browse File</label>
+          <input type="file" id="syllabus-file-input" accept=".pdf,.txt" class="hidden" />
+          <p class="drop-zone-hint">PDF or TXT · Max 16 MB</p>
+        </div>
+
+        <div id="syllabus-loading" class="loading-state hidden">
+          <div class="spinner"></div>
+          <p>Analyzing syllabus with AI… this may take 30–60 seconds.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Panel 2: Review Grading Policy ──────────────────────────────── -->
+    <section id="panel-2" class="panel">
+      <div class="panel-card">
+        <div class="panel-header-row">
+          <div>
+            <h2 class="panel-title">Review Grading Policy</h2>
+            <p class="panel-description">
+              Verify and edit the extracted grading breakdown before continuing.
+            </p>
+          </div>
+          <button class="btn btn-primary" id="policy-confirm-btn" onclick="app.confirmPolicy()">
+            Confirm &amp; Continue →
+          </button>
+        </div>
+
+        <div class="info-row">
+          <span>Course: <strong id="course-name-display">—</strong></span>
+          <span class="weight-sum-badge" id="weight-sum-badge">Total: 0%</span>
+        </div>
+
+        <div id="weight-warning" class="risk-flag hidden"></div>
+
+        <div class="table-wrapper">
+          <table class="data-table" id="policy-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Weight (%)</th>
+                <th>Number of Items</th>
+                <th>Drop Policy</th>
+                <th>Drop Count</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="policy-table-body">
+              <!-- Rows injected by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <button class="btn btn-ghost" id="add-category-btn" onclick="app.addCategoryRow()">
+          + Add Category
+        </button>
+
+        <div class="grade-scale-section">
+          <h3 class="section-subtitle">Grade Scale</h3>
+          <div id="grade-scale-editor" class="grade-scale-grid">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Panel 3: Grades Upload ───────────────────────────────────────── -->
+    <section id="panel-3" class="panel">
+      <div class="panel-card">
+        <h2 class="panel-title">Import Grades</h2>
+        <p class="panel-description">
+          Upload your grades export as a <strong>PDF</strong> file (Canvas or other LMS).
+        </p>
+
+        <div class="drop-zone" id="grades-drop-zone">
+          <div class="drop-zone-icon">📊</div>
+          <p class="drop-zone-text">Drag &amp; drop your grades PDF here</p>
+          <p class="drop-zone-sub">or</p>
+          <label class="btn btn-secondary" for="grades-file-input">Browse File</label>
+          <input type="file" id="grades-file-input" accept=".pdf" class="hidden" />
+          <p class="drop-zone-hint">PDF only · Max 16 MB</p>
+        </div>
+
+        <div id="grades-loading" class="loading-state hidden">
+          <div class="spinner"></div>
+          <p>Extracting grades with AI… this may take 30–60 seconds.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Panel 4: Review Grades ───────────────────────────────────────── -->
+    <section id="panel-4" class="panel">
+      <div class="panel-card">
+        <div class="panel-header-row">
+          <div>
+            <h2 class="panel-title">Review Grades</h2>
+            <p class="panel-description">
+              Edit any mismatched categories or incorrect scores before analysis.
+            </p>
+          </div>
+          <button class="btn btn-primary" onclick="app.confirmGrades()">
+            Analyze Grades →
+          </button>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table" id="grades-table">
+            <thead>
+              <tr>
+                <th>Assignment</th>
+                <th>Category</th>
+                <th>Score</th>
+                <th>Max Score</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="grades-table-body">
+              <!-- Rows injected by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Panel 5: Dashboard ───────────────────────────────────────────── -->
+    <section id="panel-5" class="panel">
+      <div class="panel-card">
+        <div class="panel-header-row">
+          <h2 class="panel-title">Grade Dashboard</h2>
+          <button class="btn btn-secondary" onclick="app.goToPanel(6)">What-If Analyzer →</button>
+        </div>
+
+        <!-- Hero grade display -->
+        <div class="grade-hero-row">
+          <div class="grade-hero-card">
+            <div class="grade-hero-label">Current Grade</div>
+            <div class="grade-hero-letter" id="hero-letter">—</div>
+            <div class="grade-hero-pct" id="hero-pct">—</div>
+          </div>
+          <div class="grade-hero-card">
+            <div class="grade-hero-label">Grade Buffer</div>
+            <div class="grade-hero-buffer" id="hero-buffer">—</div>
+            <div class="grade-hero-sub">before dropping a letter</div>
+          </div>
+          <div class="grade-hero-card">
+            <div class="grade-hero-label">Weight Counted</div>
+            <div class="grade-hero-pct" id="hero-weight">—</div>
+            <div class="grade-hero-sub">of total course weight</div>
+          </div>
+        </div>
+
+        <!-- Risk flags -->
+        <div id="risk-flags-container"></div>
+
+        <!-- Charts row -->
+        <div class="charts-row">
+          <div class="chart-card">
+            <h3 class="chart-title">Grade Breakdown</h3>
+            <div class="chart-wrapper">
+              <canvas id="donut-chart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3 class="chart-title">Category Performance</h3>
+            <div class="chart-wrapper">
+              <canvas id="bar-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category progress bars -->
+        <div class="section-block">
+          <h3 class="section-subtitle">Category Details</h3>
+          <div id="category-progress-container"></div>
+        </div>
+
+        <!-- Scenarios -->
+        <div class="section-block">
+          <h3 class="section-subtitle">Grade Scenarios</h3>
+          <div id="scenarios-container" class="scenarios-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Panel 6: What-If Analyzer ────────────────────────────────────── -->
+    <section id="panel-6" class="panel">
+      <div class="panel-card">
+        <div class="panel-header-row">
+          <h2 class="panel-title">What-If Analyzer</h2>
+          <button class="btn btn-secondary" onclick="app.goToPanel(5)">← Dashboard</button>
+        </div>
+
+        <div class="whatif-layout">
+          <!-- Left: inputs -->
+          <div class="whatif-inputs">
+            <h3 class="section-subtitle">Hypothetical Scores</h3>
+            <p class="panel-description">
+              Enter scores for remaining or ungraded assignments to see how they affect your final grade.
+            </p>
+            <div id="whatif-assignments-container">
+              <!-- Injected by JS -->
+            </div>
+
+            <div class="target-grade-section">
+              <h3 class="section-subtitle">Target Grade Calculator</h3>
+              <p class="panel-description">What score do you need on remaining work to earn a specific letter grade?</p>
+              <div class="target-row">
+                <label class="form-label" for="target-grade-select">I want to earn an</label>
+                <select id="target-grade-select" class="form-select">
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C">C</option>
+                  <option value="D">D</option>
+                </select>
+                <button class="btn btn-primary" onclick="app.calculateNeededScore()">Calculate</button>
+              </div>
+              <div id="needed-score-result" class="needed-score-card hidden"></div>
+            </div>
+          </div>
+
+          <!-- Right: live grade result -->
+          <div class="whatif-result">
+            <h3 class="section-subtitle">Predicted Final Grade</h3>
+            <div class="grade-hero-card">
+              <div class="grade-hero-letter" id="whatif-letter">—</div>
+              <div class="grade-hero-pct" id="whatif-pct">—</div>
+            </div>
+
+            <div class="chart-card" style="margin-top: 1.5rem;">
+              <h3 class="chart-title">Scenario Comparison</h3>
+              <div class="chart-wrapper">
+                <canvas id="scenario-chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
